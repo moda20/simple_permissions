@@ -3,6 +3,7 @@ package com.ethras.simplepermissions;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.provider.Settings;
@@ -10,19 +11,31 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.util.Log;
 
+
+import androidx.annotation.NonNull;
+
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
+import io.flutter.plugin.common.BinaryMessenger;
 import io.flutter.plugin.common.PluginRegistry;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
+import io.flutter.embedding.engine.plugins.FlutterPlugin;
+import io.flutter.embedding.engine.plugins.activity.ActivityAware;
+import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 
 /**
  * SimplePermissionsPlugin
  */
-public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistry.RequestPermissionsResultListener {
+public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistry.RequestPermissionsResultListener, FlutterPlugin, ActivityAware {
     private Registrar registrar;
     private Result result;
+    private static Context mContext;
+    private static MethodChannel channel;
+    private Activity activity;
+    private ActivityPluginBinding activityPluginBinding;
+    private static final String CHANNEL_ID = "simple_permissions";
 
     private static String MOTION_SENSOR = "MOTION_SENSOR";
 
@@ -30,15 +43,64 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
      * Plugin registration.
      */
     public static void registerWith(Registrar registrar) {
-        final MethodChannel channel = new MethodChannel(registrar.messenger(), "simple_permissions");
-        SimplePermissionsPlugin simplePermissionsPlugin = new SimplePermissionsPlugin(registrar);
-        channel.setMethodCallHandler(simplePermissionsPlugin);
-        registrar.addRequestPermissionsResultListener(simplePermissionsPlugin);
+        final MethodChannel channel = new MethodChannel(registrar.messenger(), CHANNEL_ID);
+        SimplePermissionsPlugin simplePermissionsPluginInstance = new SimplePermissionsPlugin();
+        simplePermissionsPluginInstance.initInstance(registrar.messenger(), mContext);
     }
 
-    private SimplePermissionsPlugin(Registrar registrar) {
-        this.registrar = registrar;
+
+    private void initInstance(BinaryMessenger binaryMessenger, Context context) {
+        SimplePermissionsPlugin.channel  = new MethodChannel(binaryMessenger, CHANNEL_ID);
+        SimplePermissionsPlugin.channel.setMethodCallHandler(this);
+        mContext= context;
     }
+
+
+    @Override
+    public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
+        initInstance(binding.getBinaryMessenger(), binding.getApplicationContext());
+    }
+
+    @Override
+    public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        SimplePermissionsPlugin.channel.setMethodCallHandler(null);
+        SimplePermissionsPlugin.channel = null;
+    }
+    
+
+    public SimplePermissionsPlugin() {
+    }
+
+    @Override
+    public void onAttachedToActivity(ActivityPluginBinding activityPluginBinding) {
+        // TODO: your plugin is now attached to an Activity
+        this.activity=activityPluginBinding.getActivity();
+        this.activityPluginBinding=activityPluginBinding;
+        activityPluginBinding.addRequestPermissionsResultListener(this);
+    }
+
+    @Override
+    public void onDetachedFromActivityForConfigChanges() {
+        // TODO: the Activity your plugin was attached to was destroyed to change configuration.
+        // This call will be followed by onReattachedToActivityForConfigChanges().
+        this.activity=null;
+    }
+
+    @Override
+    public void onReattachedToActivityForConfigChanges(ActivityPluginBinding activityPluginBinding) {
+        // TODO: your plugin is now attached to a new Activity after a configuration change.
+
+        this.activity=activityPluginBinding.getActivity();
+        this.activityPluginBinding=activityPluginBinding;
+        activityPluginBinding.addRequestPermissionsResultListener(this);
+    }
+
+    @Override
+    public void onDetachedFromActivity() {
+        // TODO: your plugin is no longer associated with an Activity. Clean up references.
+        this.activity=null;
+    }
+    
 
     @Override
     public void onMethodCall(MethodCall call, Result result) {
@@ -85,12 +147,12 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
     }
 
     private void openSettings() {
-        Activity activity = registrar.activity();
+        
         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.parse("package:" + activity.getPackageName()));
+                Uri.parse("package:" + this.activity.getPackageName()));
         intent.addCategory(Intent.CATEGORY_DEFAULT);
         intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        activity.startActivity(intent);
+        this.activity.startActivity(intent);
     }
 
     private String getManifestPermission(String permission) {
@@ -149,17 +211,14 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
     }
 
     private void requestPermission(String permission) {
-        Activity activity = registrar.activity();
         permission = getManifestPermission(permission);
-        Log.i("SimplePermission", "Requesting permission : " + permission);
         String[] perm = {permission};
-        ActivityCompat.requestPermissions(activity, perm, 0);
+        ActivityCompat.requestPermissions(this.activity, perm, 0);
     }
 
     private boolean checkPermission(String permission) {
-        Activity activity = registrar.activity();
+        
         permission = getManifestPermission(permission);
-        Log.i("SimplePermission", "Checking permission : " + permission);
         return PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(activity, permission);
     }
 
@@ -172,11 +231,11 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
             permission = permissions[0];
         
             if (requestCode == 0 && grantResults.length > 0) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(registrar.activity(), permission)) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this.activity, permission)) {
                     //denied
                     status = 2;
                 } else {
-                    if (ActivityCompat.checkSelfPermission(registrar.context(), permission) == PackageManager.PERMISSION_GRANTED) {
+                    if (ActivityCompat.checkSelfPermission(mContext, permission) == PackageManager.PERMISSION_GRANTED) {
                         //allowed
                         status = 3;
                     } else {

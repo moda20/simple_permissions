@@ -1,6 +1,9 @@
 name: simple_permissions_example
 description: Demonstrates how to use the simple_permissions plugin.
 
+environment:
+  sdk: ">=2.12.0 <3.0.0"
+
 dependencies:
   flutter:
     sdk: flutter

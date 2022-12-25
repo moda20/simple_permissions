@@ -12,7 +12,7 @@ class SimplePermissions {
   }
 
   /// Check a [permission] and return a [Future] with the result
-  static Future<bool> checkPermission(Permission permission) async {
+  static Future<bool> checkPermission(Permission ?permission) async {
     final bool isGranted = await _channel.invokeMethod(
         "checkPermission", {"permission": getPermissionString(permission)});
     return isGranted;
@@ -20,7 +20,7 @@ class SimplePermissions {
 
   /// Request a [permission] and return a [Future] with the result
   static Future<PermissionStatus> requestPermission(
-      Permission permission) async {
+      Permission ?permission) async {
     final status = await _channel.invokeMethod(
         "requestPermission", {"permission": getPermissionString(permission)});
 
@@ -39,7 +39,7 @@ class SimplePermissions {
   }
 
   static Future<PermissionStatus> getPermissionStatus(
-      Permission permission) async {
+      Permission ?permission) async {
     final int status = await _channel.invokeMethod(
         "getPermissionStatus", {"permission": getPermissionString(permission)});
     return intToPermissionStatus(status);
@@ -94,7 +94,7 @@ enum PermissionStatus {
   deniedNeverAsk /* android */
 }
 
-String getPermissionString(Permission permission) {
+String getPermissionString(Permission ?permission) {
   String res;
   switch (permission) {
     case Permission.CallPhone:
@@ -147,6 +147,9 @@ String getPermissionString(Permission permission) {
       break;
     case Permission.AccessMotionSensor:
       res = "MOTION_SENSOR";
+      break;
+    default:
+      res = "VIBRATE";
       break;
   }
   return res;

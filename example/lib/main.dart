@@ -11,7 +11,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   String _platformVersion = 'Unknown';
-  Permission permission;
+  Permission ?permission;
 
   @override
   initState() {
@@ -53,16 +53,16 @@ class _MyAppState extends State<MyApp> {
                 items: _getDropDownItems(),
                 value: permission,
                 onChanged: onDropDownChanged),
-            new RaisedButton(
+            new  ElevatedButton(
                 onPressed: checkPermission,
                 child: new Text("Check permission")),
-            new RaisedButton(
+            new  ElevatedButton(
                 onPressed: requestPermission,
                 child: new Text("Request permission")),
-            new RaisedButton(
+            new  ElevatedButton(
                 onPressed: getPermissionStatus,
                 child: new Text("Get permission status")),
-            new RaisedButton(
+            new  ElevatedButton(
                 onPressed: SimplePermissions.openSettings,
                 child: new Text("Open settings"))
           ]),
@@ -71,7 +71,7 @@ class _MyAppState extends State<MyApp> {
     );
   }
 
-  onDropDownChanged(Permission permission) {
+  onDropDownChanged(Permission ?permission) {
     setState(() => this.permission = permission);
     print(permission);
   }
@@ -92,7 +92,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   List<DropdownMenuItem<Permission>> _getDropDownItems() {
-    List<DropdownMenuItem<Permission>> items = new List();
+    List<DropdownMenuItem<Permission>> items = new List.empty(growable: true);
     Permission.values.forEach((permission) {
       var item = new DropdownMenuItem(
           child: new Text(getPermissionString(permission)), value: permission);
